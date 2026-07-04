@@ -18,8 +18,9 @@ jobs:
       - name: Clone ArduPilot
         run: git clone --recursive --depth 1 https://github.com/ArduPilot/ardupilot.git
 
-      - name: Copy patch script
+            - name: Copy patch script
         run: cp apply_ladrc.py ardupilot/
+       
 
       - name: Apply LADRC patch
         run: cd ardupilot && python3 apply_ladrc.py
