@@ -6,30 +6,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout ArduPilot
-        uses: actions/checkout@v4
-        with:
-          repository: ArduPilot/ardupilot
-          submodules: recursive
-          fetch-depth: 0
-            - name: Install ARM toolchain
+      - name: Install ARM toolchain
         run: |
           wget -q https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/download/v13.2.1-1.1/xpack-arm-none-eabi-gcc-13.2.1-1.1-linux-x64.tar.gz
           tar -xzf xpack-arm-none-eabi-gcc-13.2.1-1.1-linux-x64.tar.gz
-          sudo mv xpack-arm-none-eabi-gcc-13.2.1-1.1 /opt/arm-gnu-toolchain
-          echo "/opt/arm-gnu-toolchain/bin" >> $GITHUB_PATH
+          echo "$PWD/xpack-arm-none-eabi-gcc-13.2.1-1.1/bin" >> $GITHUB_PATH
+
+      - name: Clone ArduPilot
+        run: git clone --recursive --depth 1 https://github.com/ArduPilot/ardupilot.git
+
+      - name: Apply LADRC patch
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-arm-none-eabi g++-arm-none-eabi libnewlib-arm-none-eabi || \
-          (wget -q https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz && \
-           tar -xf arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz && \
-           sudo mv arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi /opt/arm-gnu-toolchain && \
-           echo "/opt/arm-gnu-toolchain/bin" >> $GITHUB_PATH)
-     
-      - name: Create LADRC patch script
-        run: |
-          cat > apply_ladrc.py << 'SCRIPT'
-          import os, shutil
+          cd ardupilot
+          python3 << 'PYEOF'
+          import os
           BASE = os.getcwd()
           patches = {
               "libraries/AC_PID/AP_PIDInfo.h": [("        float Dmod;\n        float slew_rate;","        float Dmod;\n        float slew_rate;\n        float LADRC;")],
@@ -75,17 +65,16 @@ jobs:
           with open(tc, "w", encoding="utf-8") as f: f.write(content)
           print("   AP_TECS.cpp")
           print("LADRC patch complete!")
-          SCRIPT
-          python3 apply_ladrc.py
+          PYEOF
 
-      - name: Configure
-        run: python3 waf configure --board SpeedyBeeF405WING
-
-      - name: Build
-        run: python3 waf plane
+      - name: Configure and Build
+        run: |
+          cd ardupilot
+          python3 waf configure --board SpeedyBeeF405WING
+          python3 waf plane
 
       - name: Upload firmware
         uses: actions/upload-artifact@v4
         with:
           name: ardupilot-ladrc-firmware
-          path: build/SpeedyBeeF405WING/bin/*.apj
+          path: ardupilot/build/SpeedyBeeF405WING/bin/*.apj
