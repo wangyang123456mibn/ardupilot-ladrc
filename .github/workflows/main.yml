@@ -67,6 +67,9 @@ jobs:
           print("LADRC patch complete!")
           PYEOF
 
+           - name: Install Python dependencies
+        run: pip3 install numpy
+
       - name: Configure and Build
         run: |
           cd ardupilot
