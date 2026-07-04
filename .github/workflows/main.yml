@@ -1,6 +1,8 @@
 name: Build ArduPilot LADRC
 
-on: [push]
+on:
+  push:
+    branches: [ main ]
 
 jobs:
   build:
@@ -18,14 +20,13 @@ jobs:
       - name: Clone ArduPilot
         run: git clone --recursive --depth 1 https://github.com/ArduPilot/ardupilot.git
 
-            - name: Copy patch script
-        run: cp apply_ladrc.py ardupilot/
-       
+      - name: Copy and run patch
+        run: |
+          cp apply_ladrc.py ardupilot/
+          cd ardupilot
+          python3 apply_ladrc.py
 
-      - name: Apply LADRC patch
-        run: cd ardupilot && python3 apply_ladrc.py
-
-      - name: Install deps and Build
+      - name: Build firmware
         run: |
           cd ardupilot
           pip3 install numpy
