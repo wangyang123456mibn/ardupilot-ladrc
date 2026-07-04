@@ -68,7 +68,7 @@ jobs:
           PYEOF
 
            - name: Install Python dependencies
-        run: pip3 install numpy
+          run: pip3 install numpy
 
       - name: Configure and Build
         run: |
