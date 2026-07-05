@@ -1,40 +1,46 @@
-name: Build ArduPilot LADRC
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Install ARM toolchain
-        run: |
-          wget -q https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/download/v13.2.1-1.1/xpack-arm-none-eabi-gcc-13.2.1-1.1-linux-x64.tar.gz
-          tar -xzf xpack-arm-none-eabi-gcc-13.2.1-1.1-linux-x64.tar.gz
-          echo "$PWD/xpack-arm-none-eabi-gcc-13.2.1-1.1/bin" >> $GITHUB_PATH
-
-      - name: Clone ArduPilot
-        run: git clone --recursive --depth 1 https://github.com/ArduPilot/ardupilot.git
-
-      - name: Copy and run patch
-        run: |
-          cp apply_ladrc.py ardupilot/
-          cd ardupilot
-          python3 apply_ladrc.py
-
-      - name: Build firmware
-        run: |
-          cd ardupilot
-          pip3 install numpy
-          python3 waf configure --board SpeedyBeeF405WING
-          python3 waf plane
-
-      - name: Upload firmware
-        uses: actions/upload-artifact@v4
-        with:
-          name: ardupilot-ladrc-firmware
-          path: ardupilot/build/SpeedyBeeF405WING/bin/*.apj
+import os
+BASE = os.getcwd()
+patches = {
+    "libraries/AC_PID/AP_PIDInfo.h": [("        float Dmod;\n        float slew_rate;","        float Dmod;\n        float slew_rate;\n        float LADRC;")],
+    "libraries/AC_PID/AC_PID.h": [("    // SlewLimiter\n    SlewLimiter","    // LADRC parameters\n    AP_Float _ladrc_wo;\n    AP_Float _ladrc_b0;\n    AP_Int8  _ladrc_en;\n    AP_Int8  _ladrc_order;\n    float _leso_z1;\n    float _leso_z2;\n    float _leso_z3;\n    float _last_u_ladrc;\n\n    // SlewLimiter\n    SlewLimiter"),("    float get_pid_info_Dmod","    float get_ladrc(void) const { return _pid_info.LADRC; }\n    float get_pid_info_Dmod")],
+    "libraries/AC_PID/AC_PID.cpp": [("    // 16\n    AP_GROUPINFO","    // 16\n    AP_GROUPINFO(\"LADRC_WO\",  17, AC_PID, _ladrc_wo,  0),\n    AP_GROUPINFO(\"LADRC_B0\",  18, AC_PID, _ladrc_b0,  1.0f),\n    AP_GROUPINFO(\"LADRC_EN\",  19, AC_PID, _ladrc_en,  0),\n    AP_GROUPINFO(\"LADRC_ORD\", 20, AC_PID, _ladrc_order, 1),\n    AP_GROUPINFO"),("    _pid_info.reset()","    _leso_z1 = 0.0f;\n    _leso_z2 = 0.0f;\n    _leso_z3 = 0.0f;\n    _last_u_ladrc = 0.0f;\n    _pid_info.reset()")],
+}
+print("LADRC patch started...")
+for relpath, replacements in patches.items():
+    full = os.path.join(BASE, relpath)
+    if not os.path.exists(full): print(f"  SKIP: {relpath}"); continue
+    with open(full, "r", encoding="utf-8") as f: content = f.read()
+    changed = 0
+    for old, new in replacements:
+        if old in content: content = content.replace(old, new, 1); changed += 1
+    with open(full, "w", encoding="utf-8") as f: f.write(content)
+    print(f"  [OK] {relpath}")
+cpp = os.path.join(BASE, "libraries/AC_PID/AC_PID.cpp")
+with open(cpp, "r", encoding="utf-8") as f: content = f.read()
+if "_ladrc_wo.get()" not in content:
+    lb = "\n    float ladrc_comp = 0.0f;\n    if (_ladrc_en > 0 && is_positive(dt) && is_positive(_ladrc_wo) && is_positive(_ladrc_b0)) {\n        const float wo = _ladrc_wo.get();\n        const float b0 = _ladrc_b0.get();\n        const float u_last = _last_u_ladrc;\n        const float e = _leso_z1 - measurement;\n        if (_ladrc_order == 1) {\n            const float beta1 = 2.0f * wo;\n            const float beta2 = wo * wo;\n            _leso_z1 += dt * (_leso_z2 - beta1 * e + b0 * u_last);\n            _leso_z2 += dt * (-beta2 * e);\n            ladrc_comp = _leso_z2 / b0;\n        } else {\n            const float beta1 = 3.0f * wo;\n            const float beta2 = 3.0f * wo * wo;\n            const float beta3 = wo * wo * wo;\n            _leso_z1 += dt * (_leso_z2 - beta1 * e);\n            _leso_z2 += dt * (_leso_z3 - beta2 * e + b0 * u_last);\n            _leso_z3 += dt * (-beta3 * e);\n            ladrc_comp = _leso_z3 / b0;\n        }\n    }\n"
+    content = content.replace("    // Get D term", lb + "    // Get D term")
+    content = content.replace("    _pid_info.FF = _target * _kff;","    float pid_sum = P_out + D_out + I_out;\n    _pid_info.LADRC = -ladrc_comp;\n    _last_u_ladrc = pid_sum - ladrc_comp;\n    _pid_info.FF = _target * _kff;")
+    content = content.replace("\n    return P_out + I_out + D_out;", "")
+    with open(cpp, "w", encoding="utf-8") as f: f.write(content)
+    print("  [OK] AC_PID.cpp LESO block")
+fw = os.path.join(BASE, "libraries/APM_Control/AP_FW_Controller.cpp")
+with open(fw, "r", encoding="utf-8") as f: content = f.read()
+content = content.replace("pinfo.D + pinfo.DFF", "pinfo.D + pinfo.DFF + pinfo.LADRC")
+with open(fw, "w", encoding="utf-8") as f: f.write(content)
+print("  [OK] AP_FW_Controller.cpp")
+th = os.path.join(BASE, "libraries/AP_TECS/AP_TECS.h")
+with open(th, "r", encoding="utf-8") as f: content = f.read()
+ti = "    // LADRC height control\n    AP_Float _ladrc_hgt_wo;\n    AP_Float _ladrc_hgt_b0;\n    AP_Int8  _ladrc_hgt_en;\n    float _hgt_leso_z1;\n    float _hgt_leso_z2;\n    float _hgt_leso_z3;\n    float _last_pitch_dem_ladrc;\n"
+content = content.replace("    void _update_pitch_limits", ti + "    void _update_pitch_limits")
+with open(th, "w", encoding="utf-8") as f: f.write(content)
+print("  [OK] AP_TECS.h")
+tc = os.path.join(BASE, "libraries/AP_TECS/AP_TECS.cpp")
+with open(tc, "r", encoding="utf-8") as f: content = f.read()
+content = content.replace("    AP_GROUPINFO(\"FLARE_HGT\"","    AP_GROUPINFO(\"HGT_WO\", 32, AP_TECS, _ladrc_hgt_wo, 0),\n    AP_GROUPINFO(\"HGT_B0\", 33, AP_TECS, _ladrc_hgt_b0, 5.0f),\n    AP_GROUPINFO(\"HGT_EN\", 34, AP_TECS, _ladrc_hgt_en, 0),\n    AP_GROUPINFO(\"FLARE_HGT\"")
+content = content.replace("    _pitch_dem_unc = 0.0f;","    _hgt_leso_z1 = 0.0f;\n    _hgt_leso_z2 = 0.0f;\n    _hgt_leso_z3 = 0.0f;\n    _last_pitch_dem_ladrc = 0.0f;\n    _pitch_dem_unc = 0.0f;")
+hl = "    if (_ladrc_hgt_en > 0 && is_positive(_ladrc_hgt_wo) && is_positive(_ladrc_hgt_b0) && is_positive(_DT)) {\n        const float wo  = _ladrc_hgt_wo.get();\n        const float b0  = _ladrc_hgt_b0.get();\n        const float beta1 = 3.0f * wo;\n        const float beta2 = 3.0f * wo * wo;\n        const float beta3 = wo * wo * wo;\n        const float e = _hgt_leso_z1 - _height;\n        _hgt_leso_z1 += _DT * (_hgt_leso_z2 - beta1 * e);\n        _hgt_leso_z2 += _DT * (_hgt_leso_z3 - beta2 * e + b0 * _last_pitch_dem_ladrc);\n        _hgt_leso_z3 += _DT * (-beta3 * e);\n        _pitch_dem_unc -= _hgt_leso_z3 / b0;\n    }\n    _pitch_dem = constrain_float(_pitch_dem_unc, _PITCHminf, _PITCHmaxf);\n    _last_pitch_dem_ladrc = _pitch_dem;\n"
+content = content.replace("    _pitch_dem = constrain_float(_pitch_dem_unc, _PITCHminf, _PITCHmaxf);", hl)
+with open(tc, "w", encoding="utf-8") as f: f.write(content)
+print("  [OK] AP_TECS.cpp")
+print("LADRC patch complete!")
