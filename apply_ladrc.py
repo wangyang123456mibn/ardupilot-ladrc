@@ -1,7 +1,7 @@
 import os
 BASE = os.getcwd()
 patches = {
-    "libraries/AC_PID/AP_PIDInfo.h": [("        float Dmod;\n        float slew_rate;","        float Dmod;\n        float slew_rate;\n        float LADRC;")],
+        "libraries/AC_PID/AP_PIDInfo.h": [("float Dmod;","float Dmod;\n        float LADRC;      // LADRC disturbance compensation term")],
     "libraries/AC_PID/AC_PID.h": [("    // SlewLimiter\n    SlewLimiter","    // LADRC parameters\n    AP_Float _ladrc_wo;\n    AP_Float _ladrc_b0;\n    AP_Int8  _ladrc_en;\n    AP_Int8  _ladrc_order;\n    float _leso_z1;\n    float _leso_z2;\n    float _leso_z3;\n    float _last_u_ladrc;\n\n    // SlewLimiter\n    SlewLimiter"),("    float get_pid_info_Dmod","    float get_ladrc(void) const { return _pid_info.LADRC; }\n    float get_pid_info_Dmod")],
     "libraries/AC_PID/AC_PID.cpp": [("    // 16\n    AP_GROUPINFO","    // 16\n    AP_GROUPINFO(\"LADRC_WO\",  17, AC_PID, _ladrc_wo,  0),\n    AP_GROUPINFO(\"LADRC_B0\",  18, AC_PID, _ladrc_b0,  1.0f),\n    AP_GROUPINFO(\"LADRC_EN\",  19, AC_PID, _ladrc_en,  0),\n    AP_GROUPINFO(\"LADRC_ORD\", 20, AC_PID, _ladrc_order, 1),\n    AP_GROUPINFO"),("    _pid_info.reset()","    _leso_z1 = 0.0f;\n    _leso_z2 = 0.0f;\n    _leso_z3 = 0.0f;\n    _last_u_ladrc = 0.0f;\n    _pid_info.reset()")],
 }
