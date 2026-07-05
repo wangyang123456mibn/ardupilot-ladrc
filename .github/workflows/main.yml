@@ -19,9 +19,9 @@ jobs:
 
       - name: Download ArduPilot 4.5.1
         run: |
-          wget -q https://github.com/ArduPilot/ardupilot/archive/refs/tags/Copter-4.5.1.tar.gz
+          wget -q https://github.com/ArduPilot/ardupilot/archive/refs/tags/plane-4.5.0.tar.gz
           tar -xzf Copter-4.5.1.tar.gz
-          mv ardupilot-Copter-4.5.1 ardupilot
+          mv ardupilot-plane-4.5.0 ardupilot
 
       - name: Copy and run patch
         run: |
