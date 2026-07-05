@@ -29,7 +29,7 @@ jobs:
       - name: Build firmware
         run: |
           cd ardupilot
-          pip3 install numpy
+          pip3 install numpy empy==3.3.4
           python3 waf configure --board SpeedyBeeF405WING
           python3 waf plane
 
