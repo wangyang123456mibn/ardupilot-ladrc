@@ -1,7 +1,7 @@
 import os
 BASE = os.getcwd()
 
-# 1. AP_PIDInfo.h - insert LADRC after slew_rate
+# 1. AP_PIDInfo.h
 with open(os.path.join(BASE, "libraries/AC_PID/AP_PIDInfo.h"), "r") as f:
     lines = f.readlines()
 with open(os.path.join(BASE, "libraries/AC_PID/AP_PIDInfo.h"), "w") as f:
@@ -25,23 +25,15 @@ with open(os.path.join(BASE, "libraries/AC_PID/AC_PID.cpp"), "r") as f:
     content = f.read()
 content = content.replace("    // 16\n    AP_GROUPINFO", "    // 16\n    AP_GROUPINFO(\"LADRC_WO\",  17, AC_PID, _ladrc_wo,  0),\n    AP_GROUPINFO(\"LADRC_B0\",  18, AC_PID, _ladrc_b0,  1.0f),\n    AP_GROUPINFO(\"LADRC_EN\",  19, AC_PID, _ladrc_en,  0),\n    AP_GROUPINFO(\"LADRC_ORD\", 20, AC_PID, _ladrc_order, 1),\n    AP_GROUPINFO")
 content = content.replace("    _pid_info.reset()", "    _leso_z1 = 0.0f;\n    _leso_z2 = 0.0f;\n    _leso_z3 = 0.0f;\n    _last_u_ladrc = 0.0f;\n    _pid_info.reset()")
+if "_ladrc_wo.get()" not in content:
+    lb = "\n    float ladrc_comp = 0.0f;\n    if (_ladrc_en > 0 && is_positive(dt) && is_positive(_ladrc_wo) && is_positive(_ladrc_b0)) {\n        const float wo = _ladrc_wo.get();\n        const float b0 = _ladrc_b0.get();\n        const float u_last = _last_u_ladrc;\n        const float e = _leso_z1 - measurement;\n        if (_ladrc_order == 1) {\n            const float beta1 = 2.0f * wo;\n            const float beta2 = wo * wo;\n            _leso_z1 += dt * (_leso_z2 - beta1 * e + b0 * u_last);\n            _leso_z2 += dt * (-beta2 * e);\n            ladrc_comp = _leso_z2 / b0;\n        } else {\n            const float beta1 = 3.0f * wo;\n            const float beta2 = 3.0f * wo * wo;\n            const float beta3 = wo * wo * wo;\n            _leso_z1 += dt * (_leso_z2 - beta1 * e);\n            _leso_z2 += dt * (_leso_z3 - beta2 * e + b0 * u_last);\n            _leso_z3 += dt * (-beta3 * e);\n            ladrc_comp = _leso_z3 / b0;\n        }\n    }\n    float pid_sum = P_out + D_out + I_out;\n    _pid_info.LADRC = -ladrc_comp;\n    _last_u_ladrc = pid_sum - ladrc_comp;\n"
+    content = content.replace("    _pid_info.DFF = _target_derivative * _kdff;", "    _pid_info.DFF = _target_derivative * _kdff;" + lb)
+    content = content.replace("    return P_out + D_out + I_out;", "    return P_out + D_out + I_out - ladrc_comp;")
 with open(os.path.join(BASE, "libraries/AC_PID/AC_PID.cpp"), "w") as f:
     f.write(content)
-print("  [OK] AC_PID.cpp params")
+print("  [OK] AC_PID.cpp")
 
-# 4. AC_PID.cpp - LESO block
-with open(os.path.join(BASE, "libraries/AC_PID/AC_PID.cpp"), "r") as f:
-    content = f.read()
-if "_ladrc_wo.get()" not in content:
-    lb = "\n    float ladrc_comp = 0.0f;\n    if (_ladrc_en > 0 && is_positive(dt) && is_positive(_ladrc_wo) && is_positive(_ladrc_b0)) {\n        const float wo = _ladrc_wo.get();\n        const float b0 = _ladrc_b0.get();\n        const float u_last = _last_u_ladrc;\n        const float e = _leso_z1 - measurement;\n        if (_ladrc_order == 1) {\n            const float beta1 = 2.0f * wo;\n            const float beta2 = wo * wo;\n            _leso_z1 += dt * (_leso_z2 - beta1 * e + b0 * u_last);\n            _leso_z2 += dt * (-beta2 * e);\n            ladrc_comp = _leso_z2 / b0;\n        } else {\n            const float beta1 = 3.0f * wo;\n            const float beta2 = 3.0f * wo * wo;\n            const float beta3 = wo * wo * wo;\n            _leso_z1 += dt * (_leso_z2 - beta1 * e);\n            _leso_z2 += dt * (_leso_z3 - beta2 * e + b0 * u_last);\n            _leso_z3 += dt * (-beta3 * e);\n            ladrc_comp = _leso_z3 / b0;\n        }\n    }\n"
-    content = content.replace("    // Get D term", lb + "    // Get D term")
-    content = content.replace("    _pid_info.FF = _target * _kff;","    float pid_sum = P_out + D_out + I_out;\n    _pid_info.LADRC = -ladrc_comp;\n    _last_u_ladrc = pid_sum - ladrc_comp;\n    _pid_info.FF = _target * _kff;")
-    content = content.replace("\n    return P_out + I_out + D_out;", "")
-    with open(os.path.join(BASE, "libraries/AC_PID/AC_PID.cpp"), "w") as f:
-        f.write(content)
-    print("  [OK] AC_PID.cpp LESO block")
-
-# 5. AP_FW_Controller.cpp
+# 4. AP_FW_Controller.cpp
 with open(os.path.join(BASE, "libraries/APM_Control/AP_FW_Controller.cpp"), "r") as f:
     content = f.read()
 content = content.replace("pinfo.D + pinfo.DFF", "pinfo.D + pinfo.DFF + pinfo.LADRC")
@@ -49,7 +41,7 @@ with open(os.path.join(BASE, "libraries/APM_Control/AP_FW_Controller.cpp"), "w")
     f.write(content)
 print("  [OK] AP_FW_Controller.cpp")
 
-# 6. AP_TECS.h
+# 5. AP_TECS.h
 with open(os.path.join(BASE, "libraries/AP_TECS/AP_TECS.h"), "r") as f:
     content = f.read()
 ti = "    // LADRC height control\n    AP_Float _ladrc_hgt_wo;\n    AP_Float _ladrc_hgt_b0;\n    AP_Int8  _ladrc_hgt_en;\n    float _hgt_leso_z1;\n    float _hgt_leso_z2;\n    float _hgt_leso_z3;\n    float _last_pitch_dem_ladrc;\n"
@@ -58,7 +50,7 @@ with open(os.path.join(BASE, "libraries/AP_TECS/AP_TECS.h"), "w") as f:
     f.write(content)
 print("  [OK] AP_TECS.h")
 
-# 7. AP_TECS.cpp
+# 6. AP_TECS.cpp
 with open(os.path.join(BASE, "libraries/AP_TECS/AP_TECS.cpp"), "r") as f:
     content = f.read()
 content = content.replace("    AP_GROUPINFO(\"FLARE_HGT\"","    AP_GROUPINFO(\"HGT_WO\", 32, AP_TECS, _ladrc_hgt_wo, 0),\n    AP_GROUPINFO(\"HGT_B0\", 33, AP_TECS, _ladrc_hgt_b0, 5.0f),\n    AP_GROUPINFO(\"HGT_EN\", 34, AP_TECS, _ladrc_hgt_en, 0),\n    AP_GROUPINFO(\"FLARE_HGT\"")
