@@ -1,0 +1,40 @@
+name: Build ArduPilot LADRC
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install ARM toolchain
+        run: |
+          wget -q https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/download/v13.2.1-1.1/xpack-arm-none-eabi-gcc-13.2.1-1.1-linux-x64.tar.gz
+          tar -xzf xpack-arm-none-eabi-gcc-13.2.1-1.1-linux-x64.tar.gz
+          echo "$PWD/xpack-arm-none-eabi-gcc-13.2.1-1.1/bin" >> $GITHUB_PATH
+
+      - name: Clone ArduPilot
+        run: git clone --recursive --depth 1 https://github.com/ArduPilot/ardupilot.git
+
+      - name: Copy and run patch
+        run: |
+          cp apply_ladrc.py ardupilot/
+          cd ardupilot
+          python3 apply_ladrc.py
+
+      - name: Build firmware
+        run: |
+          cd ardupilot
+          pip3 install numpy
+          python3 waf configure --board SpeedyBeeF405WING
+          python3 waf plane
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: ardupilot-ladrc-firmware
+          path: ardupilot/build/SpeedyBeeF405WING/bin/*.apj
