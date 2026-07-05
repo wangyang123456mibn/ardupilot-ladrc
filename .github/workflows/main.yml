@@ -18,7 +18,7 @@ jobs:
           echo "$PWD/xpack-arm-none-eabi-gcc-13.2.1-1.1/bin" >> $GITHUB_PATH
 
       - name: Clone ArduPilot
-        run: git clone --recursive --depth 1 --branch release/4.5 https://github.com/ArduPilot/ardupilot.git
+        run: git clone --recursive --depth 1 --branch Arduplane-4.5 https://github.com/ArduPilot/ardupilot.git
 
       - name: Copy and run patch
         run: |
