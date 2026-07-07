@@ -12,37 +12,37 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install ARM toolchain
-        run: |
+          run: |
           wget -q https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/download/v13.2.1-1.1/xpack-arm-none-eabi-gcc-13.2.1-1.1-linux-x64.tar.gz
           tar -xzf xpack-arm-none-eabi-gcc-13.2.1-1.1-linux-x64.tar.gz
           echo "$PWD/xpack-arm-none-eabi-gcc-13.2.1-1.1/bin" >> $GITHUB_PATH
 
       - name: Clone ArduPilot
-        run: |
+          run: |
           git clone --recursive https://github.com/ArduPilot/ardupilot.git
           cd ardupilot
           git checkout ArduPlane-stable
           git submodule update --init --recursive
 
       - name: Copy and run patch
-        run: |
+          run: |
           cp apply_ladrc.py ardupilot/
           cd ardupilot
           python3 apply_ladrc.py
 
       - name: Install Python deps
-        run: |
+          run: |
           python3 -m pip install --user numpy empy==3.3.4
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Build firmware
-        run: |
+          run: |
           cd ardupilot
           python3 waf configure --board SpeedyBeeF405WING
           python3 waf plane
 
-      - name: Upload firmware
+      - name: Upload firmware                                                                                                              
         uses: actions/upload-artifact@v4
         with:
-          name: ardupilot-ladrc-firmware
+name: ardupilot-ladrc-firmware
           path: ardupilot/build/SpeedyBeeF405WING/bin/*.apj
