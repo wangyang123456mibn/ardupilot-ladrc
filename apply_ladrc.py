@@ -96,7 +96,7 @@ patch_file("libraries/AC_PID/AC_PID.cpp", [
      "    memset(&_pid_info, 0, sizeof(_pid_info));"),
     ("    _pid_info.DFF = _target_derivative * _kdff;",
      "    _pid_info.DFF = _target_derivative * _kdff;" + lb),
-    ("    return P_out + D_out + integrator;",
+    ("    return P_out + D_out + _integrator;",
      "    return P_out + D_out + _integrator - ladrc_comp;")
 ])
 
@@ -105,51 +105,9 @@ patch_file("libraries/APM_Control/AP_FW_Controller.cpp", [
     ("pinfo.D + pinfo.DFF", "pinfo.D + pinfo.DFF + pinfo.LADRC")
 ], optional=True)
 
-# 5. AP_TECS.h - add LADRC height control variables
-patch_file("libraries/AP_TECS/AP_TECS.h", [
-    ("    void _update_pitch_limits",
-     "    // LADRC height control\n"
-     "    AP_Float _ladrc_hgt_wo;\n"
-     "    AP_Float _ladrc_hgt_b0;\n"
-     "    AP_Int8  _ladrc_hgt_en;\n"
-     "    float _hgt_leso_z1;\n"
-     "    float _hgt_leso_z2;\n"
-     "    float _hgt_leso_z3;\n"
-     "    float _last_pitch_dem_ladrc;\n\n"
-     "    void _update_pitch_limits")
-])
-
-# 6. AP_TECS.cpp - add LADRC height control logic
-hl = """    if (_ladrc_hgt_en > 0 && is_positive(_ladrc_hgt_wo) && is_positive(_ladrc_hgt_b0) && is_positive(_DT)) {
-        const float wo  = _ladrc_hgt_wo.get();
-        const float b0  = _ladrc_hgt_b0.get();
-        const float beta1 = 3.0f * wo;
-        const float beta2 = 3.0f * wo * wo;
-        const float beta3 = wo * wo * wo;
-        const float e = _hgt_leso_z1 - _height;
-        _hgt_leso_z1 += _DT * (_hgt_leso_z2 - beta1 * e);
-        _hgt_leso_z2 += _DT * (_hgt_leso_z3 - beta2 * e + b0 * _last_pitch_dem_ladrc);
-        _hgt_leso_z3 += _DT * (-beta3 * e);
-        _pitch_dem_unc -= _hgt_leso_z3 / b0;
-    }
-    _pitch_dem = constrain_float(_pitch_dem_unc, _PITCHminf, _PITCHmaxf);
-    _last_pitch_dem_ladrc = _pitch_dem;
-"""
-
-patch_file("libraries/AP_TECS/AP_TECS.cpp", [
-    ("    AP_GROUPINFO(\"FLARE_HGT\"",
-     "    AP_GROUPINFO(\"HGT_WO\", 32, AP_TECS, _ladrc_hgt_wo, 0),\n"
-     "    AP_GROUPINFO(\"HGT_B0\", 33, AP_TECS, _ladrc_hgt_b0, 5.0f),\n"
-     "    AP_GROUPINFO(\"HGT_EN\", 34, AP_TECS, _ladrc_hgt_en, 0),\n"
-     "    AP_GROUPINFO(\"FLARE_HGT\""),
-    ("    _pitch_dem_unc = 0.0f;",
-     "    _hgt_leso_z1 = 0.0f;\n"
-     "    _hgt_leso_z2 = 0.0f;\n"
-     "    _hgt_leso_z3 = 0.0f;\n"
-     "    _last_pitch_dem_ladrc = 0.0f;\n"
-     "    _pitch_dem_unc = 0.0f;"),
-    ("    _pitch_dem = constrain_float(_pitch_dem_unc, _PITCHminf, _PITCHmaxf);",
-     hl)
-])
+# 5-6. AP_TECS modifications disabled - caused firmware crash on F405
+# TODO: Re-enable after debugging the root cause
+print("  [SKIP] AP_TECS.h (disabled to avoid crash)")
+print("  [SKIP] AP_TECS.cpp (disabled to avoid crash)")
 
 print("LADRC patch complete!")
