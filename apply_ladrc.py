@@ -78,7 +78,7 @@ lb = """
         }
     }
     _pid_info.LADRC = -ladrc_comp;
-    _last_u_ladrc = (P_out + D_out + I_out) - ladrc_comp;
+    _last_u_ladrc = (P_out + D_out + _integrator) - ladrc_comp;
 """
 
 patch_file("libraries/AC_PID/AC_PID.cpp", [
@@ -96,8 +96,8 @@ patch_file("libraries/AC_PID/AC_PID.cpp", [
      "    memset(&_pid_info, 0, sizeof(_pid_info));"),
     ("    _pid_info.DFF = _target_derivative * _kdff;",
      "    _pid_info.DFF = _target_derivative * _kdff;" + lb),
-    ("    return P_out + D_out + I_out;",
-     "    return P_out + D_out + I_out - ladrc_comp;")
+    ("    return P_out + D_out + integrator;",
+     "    return P_out + D_out + _integrator - ladrc_comp;")
 ])
 
 # 4. AP_FW_Controller.cpp - add LADRC to output sum (optional, may not exist on stable)
