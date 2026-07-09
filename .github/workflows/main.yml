@@ -33,7 +33,7 @@ jobs:
       - name: Install Python deps
         run: |
           python3 -m pip install --user numpy empy==3.3.4
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          echo "$HOME/.local/bin" >> $GITHUB_PATH future
 
       - name: Build firmware
         run: |
