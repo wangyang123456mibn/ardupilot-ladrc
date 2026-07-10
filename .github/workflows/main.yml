@@ -45,4 +45,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ardupilot-ladrc-firmware
-          path: ardupilot/build/SpeedyBeeF405WING/bin/*.apj
+          path: |
+            ardupilot/build/SpeedyBeeF405WING/bin/*.apj
+            ardupilot/build/SpeedyBeeF405WING/bin/*.hex
