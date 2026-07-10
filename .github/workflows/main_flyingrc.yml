@@ -41,6 +41,22 @@ jobs:
           python3 waf configure --board MatekF405-TE
           python3 waf plane
 
+      - name: Extract .hex from .apj
+        run: |
+          cd ardupilot
+          for apj in build/MatekF405-TE/bin/*.apj; do
+            python3 -c "
+import json
+with open('$apj', 'r') as f:
+    data = json.load(f)
+hex_path = '$apj'.replace('.apj', '.hex')
+with open(hex_path, 'w') as f:
+    f.write(data['image'])
+print(f'Extracted: {hex_path}')
+"
+          done
+          ls -la build/MatekF405-TE/bin/
+
       - name: Upload firmware
         uses: actions/upload-artifact@v4
         with:
