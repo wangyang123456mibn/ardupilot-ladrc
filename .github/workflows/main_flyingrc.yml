@@ -45,4 +45,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ardupilot-ladrc-firmware-flyingrc
-          path: ardupilot/build/MatekF405-TE/bin/*.apj
+          path: |
+            ardupilot/build/MatekF405-TE/bin/*.apj
+            ardupilot/build/MatekF405-TE/bin/*.hex
