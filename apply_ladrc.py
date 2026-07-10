@@ -132,3 +132,14 @@ print("  [SKIP] AP_TECS.h (disabled - needs separate refactoring)")
 print("  [SKIP] AP_TECS.cpp (disabled - needs separate refactoring)")
 
 print("LADRC patch v2 complete! (Multi-instance, macro-configurable)")
+
+# Extract .hex files from .apj files (for STM32CubeProgrammer flashing)
+def extract_hex():
+    import json, glob
+    for apj in glob.glob('build/*/bin/*.apj'):
+        with open(apj) as f:
+            data = json.load(f)
+        hex_path = apj.replace('.apj', '.hex')
+        with open(hex_path, 'w') as f:
+            f.write(data['image'])
+        print(f"Extracted: {hex_path}")
