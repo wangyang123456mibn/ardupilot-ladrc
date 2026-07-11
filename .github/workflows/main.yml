@@ -40,7 +40,6 @@ jobs:
           cd ardupilot
           python3 waf configure --board SpeedyBeeF405WING
           python3 waf plane
-          python3 -c "import apply_ladrc; apply_ladrc.extract_hex()"
           ls -la build/SpeedyBeeF405WING/bin/
 
       - name: Upload firmware
