@@ -40,7 +40,6 @@ jobs:
           cd ardupilot
           python3 waf configure --board MatekF405-TE
           python3 waf plane
-          python3 -c "import apply_ladrc; apply_ladrc.extract_hex()"
           ls -la build/MatekF405-TE/bin/
 
       - name: Upload firmware
