@@ -1,0 +1,52 @@
+name: Build ArduCopter LADRC (FlyingRC F4WSE MK1.5)
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install ARM toolchain
+        run: |
+          wget -q https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/download/v13.2.1-1.1/xpack-arm-none-eabi-gcc-13.2.1-1.1-linux-x64.tar.gz
+          tar -xzf xpack-arm-none-eabi-gcc-13.2.1-1.1-linux-x64.tar.gz
+          echo "$PWD/xpack-arm-none-eabi-gcc-13.2.1-1.1/bin" >> $GITHUB_PATH
+
+      - name: Clone ArduPilot
+        run: |
+          git clone --recursive https://github.com/ArduPilot/ardupilot.git
+          cd ardupilot
+          git checkout ArduCopter-stable
+          git submodule update --init --recursive
+
+      - name: Copy and run patch
+        run: |
+          cp apply_ladrc_copter.py ardupilot/
+          cd ardupilot
+          python3 apply_ladrc_copter.py
+
+      - name: Install Python deps
+        run: |
+          python3 -m pip install --user numpy empy==3.3.4 future
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Build firmware
+        run: |
+          cd ardupilot
+          python3 waf configure --board MatekF405-TE
+          python3 waf copter
+          python3 -c "import apply_ladrc_copter; apply_ladrc_copter.extract_hex()"
+          ls -la build/MatekF405-TE/bin/
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: ardupilot-ladrc-copter-flyingrc
+          path: |
+            ardupilot/build/MatekF405-TE/bin/*.apj
+            ardupilot/build/MatekF405-TE/bin/*.hex

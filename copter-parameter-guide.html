@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArduCopter LADRC BiCopter 参数配置指南 — FlyingRC F4WSE MK1.5</title>
+<style>
+  :root {
+    --bg-primary: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-tertiary: #21262d;
+    --border: #30363d;
+    --text-primary: #e6edf3;
+    --text-secondary: #8b949e;
+    --text-muted: #6e7681;
+    --accent: #58a6ff;
+    --accent-hover: #79c0ff;
+    --green: #3fb950;
+    --green-bg: rgba(63,185,80,0.1);
+    --yellow: #d29922;
+    --yellow-bg: rgba(210,153,34,0.1);
+    --red: #f85149;
+    --red-bg: rgba(248,81,73,0.1);
+    --orange: #db6d28;
+    --orange-bg: rgba(219,109,40,0.1);
+    --blue-bg: rgba(88,166,255,0.1);
+    --table-header: #1c2129;
+    --table-row-alt: #0d1117;
+    --table-row: #161b22;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", Helvetica, Arial, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  .container {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 48px 20px 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header .subtitle {
+    color: var(--text-secondary);
+    font-size: 15px;
+  }
+
+  /* Hardware card */
+  .hw-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px 28px;
+    margin-bottom: 40px;
+  }
+  .hw-card h2 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .hw-card h2 .icon { font-size: 20px; }
+  .hw-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+  }
+  .hw-item {
+    background: var(--bg-tertiary);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .hw-item .label { color: var(--text-secondary); font-size: 13px; }
+  .hw-item .value { color: var(--text-primary); font-weight: 600; font-size: 13px; text-align: right; }
+
+  /* Steps */
+  .step {
+    margin-bottom: 32px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 24px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+  }
+  .step-header:hover { background: var(--bg-tertiary); }
+  .step-num {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), #388bfd);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 15px;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .step-title { font-size: 17px; font-weight: 600; }
+  .step-toggle {
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: 20px;
+    transition: transform 0.3s;
+    flex-shrink: 0;
+  }
+  .step-toggle.open { transform: rotate(180deg); }
+
+  .step-body {
+    padding: 0 24px 24px;
+    display: none;
+  }
+  .step-body.show { display: block; }
+
+  .step-body p {
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+    line-height: 1.8;
+  }
+  .step-body ul, .step-body ol {
+    color: var(--text-secondary);
+    margin: 10px 0 14px 20px;
+  }
+  .step-body li { margin-bottom: 6px; }
+  .step-body strong { color: var(--text-primary); }
+
+  /* Tables */
+  .param-table-wrap {
+    overflow-x: auto;
+    margin: 16px 0;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  .param-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+  .param-table thead th {
+    background: var(--table-header);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .param-table tbody td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .param-table tbody tr:nth-child(even) { background: var(--table-row-alt); }
+  .param-table tbody tr:nth-child(odd) { background: var(--table-row); }
+  .param-table .param-name {
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+    color: var(--accent);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .param-table .param-val {
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+    color: var(--green);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .param-table .param-desc { color: var(--text-secondary); }
+
+  /* Callout boxes */
+  .callout {
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    line-height: 1.7;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .callout .callout-icon { flex-shrink: 0; font-size: 16px; margin-top: 2px; }
+  .callout.info { background: var(--blue-bg); border: 1px solid rgba(88,166,255,0.3); color: var(--accent); }
+  .callout.warn { background: var(--yellow-bg); border: 1px solid rgba(210,153,34,0.3); color: var(--yellow); }
+  .callout.danger { background: var(--red-bg); border: 1px solid rgba(248,81,73,0.3); color: var(--red); }
+  .callout.success { background: var(--green-bg); border: 1px solid rgba(63,185,80,0.3); color: var(--green); }
+  .callout p { color: inherit !important; margin-bottom: 0 !important; }
+
+  /* Code */
+  code {
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--accent);
+  }
+  .code-block {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+    font-size: 13px;
+    color: var(--text-secondary);
+    overflow-x: auto;
+    margin: 12px 0;
+    line-height: 1.6;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .container { padding: 16px 12px 40px; }
+    .header h1 { font-size: 22px; }
+    .hw-grid { grid-template-columns: 1fr; }
+    .step-header { padding: 14px 16px; }
+    .step-body { padding: 0 16px 18px; }
+    .param-table { font-size: 12.5px; }
+    .param-table thead th, .param-table tbody td { padding: 7px 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+  <h1>ArduCopter LADRC BiCopter 参数配置指南</h1>
+  <p class="subtitle">FlyingRC F4WSE MK1.5 (MatekF405-TE) &middot; 双旋翼 + V-tail 舵机 &middot; Mission Planner</p>
+</div>
+
+<!-- Hardware Info -->
+<div class="hw-card">
+  <h2><span class="icon">&#9881;</span> 硬件配置清单</h2>
+  <div class="hw-grid">
+    <div class="hw-item"><span class="label">飞控板</span><span class="value">FlyingRC F4WSE MK1.5 (MatekF405-TE)</span></div>
+    <div class="hw-item"><span class="label">电机</span><span class="value">G1505 V2 3450KV &times; 2</span></div>
+    <div class="hw-item"><span class="label">电调</span><span class="value">LANRC 35A &times; 2</span></div>
+    <div class="hw-item"><span class="label">舵机</span><span class="value">PTK 7455MG &times; 2 (V-tail)</span></div>
+    <div class="hw-item"><span class="label">GPS</span><span class="value">BZ251 (室内测试时断开)</span></div>
+    <div class="hw-item"><span class="label">电池</span><span class="value">4S 650mAh 150C</span></div>
+    <div class="hw-item"><span class="label">遥控器</span><span class="value">RadioMaster Pocket + ELRS 接收器</span></div>
+    <div class="hw-item"><span class="label">ELRS 接口</span><span class="value">UART1 (SERIAL1)</span></div>
+  </div>
+</div>
+
+<!-- ======================== Step 1 ======================== -->
+<div class="step" id="step1">
+  <div class="step-header" onclick="toggleStep('step1')">
+    <div class="step-num">1</div>
+    <div class="step-title">烧录固件</div>
+    <div class="step-toggle open">&#9660;</div>
+  </div>
+  <div class="step-body show">
+    <p>使用 GitHub Actions 编译生成的 ArduCopter LADRC 固件（.bin 或 .hex 文件）进行烧录。</p>
+
+    <h3 style="font-size:15px; margin: 16px 0 10px;">烧录步骤</h3>
+    <ol>
+      <li>打开 <strong>STM32CubeProgrammer</strong></li>
+      <li>通过 ST-Link 或 USB DFU 模式连接飞控</li>
+      <li>选择固件文件（<code>.bin</code> 或 <code>.hex</code>）</li>
+      <li>设置烧录起始地址为 <code>0x08010000</code></li>
+      <li>点击 <strong>Download</strong> 烧录</li>
+      <li>烧录完成后断开 ST-Link，通过 USB 连接 Mission Planner</li>
+    </ol>
+
+    <div class="callout warn">
+      <span class="callout-icon">&#9888;</span>
+      <p><strong>注意：</strong>ArduPilot 在 STM32 上的启动地址为 <code>0x08010000</code>（偏移 64KB，为 bootloader 留出空间）。请勿烧录到 <code>0x08000000</code>，否则会覆盖 bootloader 导致无法启动。</p>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">&#8505;</span>
+      <p>如果使用 <code>.apj</code> 文件，可以直接在 Mission Planner 中通过 <strong>Initial Setup &rarr; Install Firmware</strong> &rarr; <strong>Load custom firmware</strong> 进行烧录。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== Step 2 ======================== -->
+<div class="step" id="step2">
+  <div class="step-header" onclick="toggleStep('step2')">
+    <div class="step-num">2</div>
+    <div class="step-title">遥控器校准</div>
+    <div class="step-toggle">&#9660;</div>
+  </div>
+  <div class="step-body">
+    <p>在配置任何参数之前，先完成遥控器校准。</p>
+
+    <h3 style="font-size:15px; margin: 16px 0 10px;">操作步骤</h3>
+    <ol>
+      <li>确保 ELRS 接收器已连接到飞控的 <strong>UART1 (SERIAL1)</strong> 端口</li>
+      <li>遥控器 (RadioMaster Pocket) 与 ELRS 接收器已完成对频绑定</li>
+      <li>打开 Mission Planner，连接飞控</li>
+      <li>进入 <strong>初始设置 &rarr; 必要硬件 &rarr; 遥控器校准</strong></li>
+      <li>点击 <strong>校准遥控</strong></li>
+      <li>按照提示移动所有摇杆和开关，确保所有通道（CH1-CH6）都有正确的行程范围</li>
+      <li>确认各通道方向正确：
+        <ul>
+          <li><strong>CH1</strong>：横滚（Roll）&mdash; 左右移动</li>
+          <li><strong>CH2</strong>：俯仰（Pitch）&mdash; 上下移动</li>
+          <li><strong>CH3</strong>：油门（Throttle）&mdash; 上下移动</li>
+          <li><strong>CH4</strong>：偏航（Yaw）&mdash; 左右移动</li>
+          <li><strong>CH5</strong>：辅助通道 1</li>
+          <li><strong>CH6</strong>：飞行模式切换（三段开关）</li>
+        </ul>
+      </li>
+      <li>点击 <strong>完成时点击</strong> 保存校准数据</li>
+    </ol>
+
+    <div class="callout info">
+      <span class="callout-icon">&#8505;</span>
+      <p>ELRS 使用 CRSF 协议，通道值为 1000-2000&mu;s（标准 PWM 范围）。校准时确保所有通道的最低值约为 1000，最高值约为 2000。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== Step 3 ======================== -->
+<div class="step" id="step3">
+  <div class="step-header" onclick="toggleStep('step3')">
+    <div class="step-num">3</div>
+    <div class="step-title">串口配置</div>
+    <div class="step-toggle">&#9660;</div>
+  </div>
+  <div class="step-body">
+    <p>配置飞控的串口，使 ELRS 接收器和 MAVLink 遥测正常工作。</p>
+
+    <div class="param-table-wrap">
+      <table class="param-table">
+        <thead>
+          <tr><th>参数</th><th>值</th><th>用途</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="param-name">SERIAL1_PROTOCOL</td>
+            <td class="param-val">23</td>
+            <td class="param-desc">ELRS CRSF 接收器协议</td>
+          </tr>
+          <tr>
+            <td class="param-name">SERIAL1_BAUD</td>
+            <td class="param-val">57</td>
+            <td class="param-desc">57600 baud（CRSF 协议标准波特率）</td>
+          </tr>
+          <tr>
+            <td class="param-name">SERIAL2_PROTOCOL</td>
+            <td class="param-val">2</td>
+            <td class="param-desc">MAVLink2 遥测输出（连接地面站）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">&#8505;</span>
+      <p><strong>SERIAL1</strong> 连接 ELRS 接收器（RX/TX 交叉连接），<strong>SERIAL2</strong> 可连接数传模块或 USB 用于 MAVLink 遥测。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== Step 4 ======================== -->
+<div class="step" id="step4">
+  <div class="step-header" onclick="toggleStep('step4')">
+    <div class="step-num">4</div>
+    <div class="step-title">机型配置</div>
+    <div class="step-toggle">&#9660;</div>
+  </div>
+  <div class="step-body">
+    <p>将飞控设置为 BiCopter（双旋翼）机型。ArduCopter 的 <code>FRAME_CLASS=10</code> 为 BiCopter 模式。</p>
+
+    <div class="param-table-wrap">
+      <table class="param-table">
+        <thead>
+          <tr><th>参数</th><th>值</th><th>含义</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="param-name">FRAME_CLASS</td>
+            <td class="param-val">10</td>
+            <td class="param-desc">BiCopter（双旋翼飞行器）</td>
+          </tr>
+          <tr>
+            <td class="param-name">FRAME_TYPE</td>
+            <td class="param-val">1</td>
+            <td class="param-desc">X 型（BiCopter 模式下忽略此值，设为 1 即可）</td>
+          </tr>
+          <tr>
+            <td class="param-name">AHRS_ORIENTATION</td>
+            <td class="param-val">0</td>
+            <td class="param-desc">标准方向（飞控正面朝前安装）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">&#8505;</span>
+      <p>修改 <code>FRAME_CLASS</code> 后需要<strong>重启飞控</strong>才能生效。Mission Planner 会自动提示重启。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== Step 5 ======================== -->
+<div class="step" id="step5">
+  <div class="step-header" onclick="toggleStep('step5')">
+    <div class="step-num">5</div>
+    <div class="step-title">舵机输出配置（BiCopter 特有）</div>
+    <div class="step-toggle">&#9660;</div>
+  </div>
+  <div class="step-body">
+    <p>BiCopter 模式需要 <strong>2 个电机输出 + 2 个倾斜舵机输出</strong>。飞控通过控制舵机角度来调整电机推力方向，从而实现俯仰和偏航控制。</p>
+
+    <div class="param-table-wrap">
+      <table class="param-table">
+        <thead>
+          <tr><th>参数</th><th>值</th><th>含义</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="param-name">SERVO1_FUNCTION</td>
+            <td class="param-val">33</td>
+            <td class="param-desc">Motor1（左电机）</td>
+          </tr>
+          <tr>
+            <td class="param-name">SERVO2_FUNCTION</td>
+            <td class="param-val">34</td>
+            <td class="param-desc">Motor2（右电机）</td>
+          </tr>
+          <tr>
+            <td class="param-name">SERVO3_FUNCTION</td>
+            <td class="param-val">38</td>
+            <td class="param-desc">TiltServo1（左倾斜舵机）</td>
+          </tr>
+          <tr>
+            <td class="param-name">SERVO4_FUNCTION</td>
+            <td class="param-val">39</td>
+            <td class="param-desc">TiltServo2（右倾斜舵机）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">&#9888;</span>
+      <p><strong>V-tail 舵机说明：</strong>本机使用的 PTK 7455MG 舵机为 V-tail 配置（控制俯仰和偏航），并非标准 BiCopter 的倾斜舵机。但在 ArduCopter 的 <code>FRAME_CLASS=10</code> BiCopter 模式中，TiltServo 的功能正是通过差动控制来同时影响俯仰和偏航，因此 V-tail 舵机的效果与此类似。</p>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">&#8505;</span>
+      <p>如果标准 BiCopter 模式的飞行效果不满足需求（例如 V-tail 的混控方式与 TiltServo 预期不同），可以考虑改用 <code>FRAME_CLASS=0</code>（Quad）+ 自定义混控矩阵。但建议<strong>先用标准 BiCopter 模式进行测试</strong>。</p>
+    </div>
+
+    <h3 style="font-size:15px; margin: 18px 0 10px;">舵机行程设置</h3>
+    <p>根据 PTK 7455MG 舵机的实际行程调整以下参数（默认值通常即可）：</p>
+    <div class="param-table-wrap">
+      <table class="param-table">
+        <thead>
+          <tr><th>参数</th><th>建议值</th><th>含义</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="param-name">SERVO3_MIN</td>
+            <td class="param-val">1000</td>
+            <td class="param-desc">TiltServo1 最小 PWM</td>
+          </tr>
+          <tr>
+            <td class="param-name">SERVO3_MAX</td>
+            <td class="param-val">2000</td>
+            <td class="param-desc">TiltServo1 最大 PWM</td>
+          </tr>
+          <tr>
+            <td class="param-name">SERVO4_MIN</td>
+            <td class="param-val">1000</td>
+            <td class="param-desc">TiltServo2 最小 PWM</td>
+          </tr>
+          <tr>
+            <td class="param-name">SERVO4_MAX</td>
+            <td class="param-val">2000</td>
+            <td class="param-desc">TiltServo2 最大 PWM</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== Step 6 ======================== -->
+<div class="step" id="step6">
+  <div class="step-header" onclick="toggleStep('step6')">
+    <div class="step-num">6</div>
+    <div class="step-title">飞行模式配置</div>
+    <div class="step-toggle">&#9660;</div>
+  </div>
+  <div class="step-body">
+    <p>配置三段开关控制的飞行模式切换。使用 <strong>CH6</strong>（三段开关）进行模式切换。</p>
+
+    <h3 style="font-size:15px; margin: 16px 0 10px;">三段开关 PWM 映射说明</h3>
+    <p>ArduCopter 将 CH6 的 PWM 范围均分为 6 个档位，三段开关对应如下：</p>
+    <div class="param-table-wrap">
+      <table class="param-table">
+        <thead>
+          <tr><th>开关位置</th><th>PWM 范围</th><th>对应档位 (Position)</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>低档</td>
+            <td>~1000-1233&mu;s</td>
+            <td>Position 1</td>
+          </tr>
+          <tr>
+            <td>中档</td>
+            <td>~1234-1766&mu;s</td>
+            <td>Position 4</td>
+          </tr>
+          <tr>
+            <td>高档</td>
+            <td>~1767-2000&mu;s</td>
+            <td>Position 6</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">&#9888;</span>
+      <p><strong>关键：</strong>三段开关的中间位置对应的是 <strong>Position 4</strong>（不是 Position 2！）。因此必须配置 <code>FLTMODE4</code> 而不是 <code>FLTMODE2</code> 来设置中档模式。</p>
+    </div>
+
+    <h3 style="font-size:15px; margin: 18px 0 10px;">正确的飞行模式参数配置</h3>
+    <div class="param-table-wrap">
+      <table class="param-table">
+        <thead>
+          <tr><th>参数</th><th>值</th><th>含义</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="param-name">FLTMODE_CH</td>
+            <td class="param-val">6</td>
+            <td class="param-desc">使用 CH6 三段开关切换飞行模式</td>
+          </tr>
+          <tr>
+            <td class="param-name">FLTMODE1</td>
+            <td class="param-val">0</td>
+            <td class="param-desc">Position 1（低档）= Stabilize 自稳定模式</td>
+          </tr>
+          <tr>
+            <td class="param-name">FLTMODE2</td>
+            <td class="param-val">-1</td>
+            <td class="param-desc">Position 2 = 禁用</td>
+          </tr>
+          <tr>
+            <td class="param-name">FLTMODE3</td>
+            <td class="param-val">-1</td>
+            <td class="param-desc">Position 3 = 禁用</td>
+          </tr>
+          <tr>
+            <td class="param-name">FLTMODE4</td>
+            <td class="param-val">2</td>
+            <td class="param-desc">Position 4（中档）= AltHold 定高模式</td>
+          </tr>
+          <tr>
+            <td class="param-name">FLTMODE5</td>
+            <td class="param-val">-1</td>
+            <td class="param-desc">Position 5 = 禁用</td>
+          </tr>
+          <tr>
+            <td class="param-name">FLTMODE6</td>
+            <td class="param-val">5</td>
+            <td class="param-desc">Position 6（高档）= Loiter 定点模式</td>
+          </tr>
+          <tr>
+            <td class="param-name">INITIAL_MODE</td>
+            <td class="param-val">2</td>
+            <td class="param-desc">解锁时默认进入 AltHold 定高模式</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">&#8505;</span>
+      <p><strong>模式说明：</strong><br>
+      - <strong>Stabilize (0)</strong>：自稳定模式，手动控制油门和姿态角度。适合首次试飞。<br>
+      - <strong>AltHold (2)</strong>：定高模式，自动保持高度，手动控制位置。需要气压计。<br>
+      - <strong>Loiter (5)</strong>：定点模式，自动保持位置和高度。需要 GPS 和气压计。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== Step 7 ======================== -->
+<div class="step" id="step7">
+  <div class="step-header" onclick="toggleStep('step7')">
+    <div class="step-num">7</div>
+    <div class="step-title">传感器配置</div>
+    <div class="step-toggle">&#9660;</div>
+  </div>
+  <div class="step-body">
+    <p>配置传感器使能状态。室内测试时需要禁用 GPS 和指南针。</p>
+
+    <div class="param-table-wrap">
+      <table class="param-table">
+        <thead>
+          <tr><th>参数</th><th>值</th><th>含义</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="param-name">GPS1_TYPE</td>
+            <td class="param-val">1</td>
+            <td class="param-desc">uBlox GPS（室内测试时设为 <code>0</code> 禁用）</td>
+          </tr>
+          <tr>
+            <td class="param-name">COMPASS_USE</td>
+            <td class="param-val">1</td>
+            <td class="param-desc">使用指南针（室内测试时设为 <code>0</code> 禁用）</td>
+          </tr>
+          <tr>
+            <td class="param-name">COMPASS_ENABLE</td>
+            <td class="param-val">1</td>
+            <td class="param-desc">启用指南针（室内测试时设为 <code>0</code> 禁用）</td>
+          </tr>
+          <tr>
+            <td class="param-name">ARMING_CHECK</td>
+            <td class="param-val">0</td>
+            <td class="param-desc">禁用所有解锁前检查（测试阶段使用）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">&#9888;</span>
+      <p><strong>测试阶段安全警告：</strong><code>ARMING_CHECK=0</code> 会禁用所有解锁前安全检查，包括 GPS 锁定、指南针校准、加速度计校准等。这仅适用于室内测试阶段。<strong>室外飞行前必须恢复安全检查</strong>，建议设为 <code>ARMING_CHECK=1</code>（启用所有默认检查）。</p>
+    </div>
+
+    <h3 style="font-size:15px; margin: 18px 0 10px;">室内测试配置</h3>
+    <p>在室内测试时，使用以下传感器配置：</p>
+    <div class="param-table-wrap">
+      <table class="param-table">
+        <thead>
+          <tr><th>参数</th><th>值</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="param-name">GPS1_TYPE</td>
+            <td class="param-val">0</td>
+            <td class="param-desc">禁用 GPS</td>
+          </tr>
+          <tr>
+            <td class="param-name">COMPASS_USE</td>
+            <td class="param-val">0</td>
+            <td class="param-desc">禁用指南针使用</td>
+          </tr>
+          <tr>
+            <td class="param-name">COMPASS_ENABLE</td>
+            <td class="param-val">0</td>
+            <td class="param-desc">禁用指南针</td>
+          </tr>
+          <tr>
+            <td class="param-name">ARMING_CHECK</td>
+            <td class="param-val">0</td>
+            <td class="param-desc">禁用所有检查</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== Step 8 ======================== -->
+<div class="step" id="step8">
+  <div class="step-header" onclick="toggleStep('step8')">
+    <div class="step-num">8</div>
+    <div class="step-title">电调校准</div>
+    <div class="step-toggle">&#9660;</div>
+  </div>
+  <div class="step-body">
+    <p>电调（ESC）需要校准油门行程范围，确保油门信号与电机转速正确对应。</p>
+
+    <h3 style="font-size:15px; margin: 16px 0 10px;">方法 1：ArduCopter 原生自动校准（推荐）</h3>
+    <ol>
+      <li>断开电机电源（<strong>非常重要！</strong> 拔掉电池，仅保留 USB 供电）</li>
+      <li>在 Mission Planner 中设置 <code>ESC_CALIBRATION=3</code></li>
+      <li>写入参数后<strong>重启飞控</strong></li>
+      <li>飞控重启后会自动发送最大油门信号（2000&mu;s）</li>
+      <li>此时<strong>接通电机电源</strong>（连接电池）</li>
+      <li>等待电调发出确认音（通常为"哔-哔-"两声）</li>
+      <li>约 5 秒后飞控自动发送最小油门信号（1000&mu;s）</li>
+      <li>电调再次发出确认音，校准完成</li>
+      <li>设置 <code>ESC_CALIBRATION=0</code>（关闭校准模式）</li>
+      <li>重启飞控</li>
+    </ol>
+
+    <div class="callout danger">
+      <span class="callout-icon">&#9888;</span>
+      <p><strong>安全警告：</strong>电调校准时必须先断开电机电源！在发送最大油门信号（步骤 6）之前，确保螺旋桨已拆下或电机无法转动。校准完成后接通电源时，保持螺旋桨远离人体和障碍物。</p>
+    </div>
+
+    <h3 style="font-size:15px; margin: 20px 0 10px;">方法 2：RCPassThru 手动校准</h3>
+    <ol>
+      <li>在 Mission Planner 中进入 <strong>初始设置 &rarr; 必要硬件 &rarr; 电机测试</strong></li>
+      <li>选择 <strong>RCPassThru</strong> 模式</li>
+      <li>选择要校准的电机通道（例如 CH1、CH2）</li>
+      <li>使用遥控器油门摇杆手动发送最大/最小信号进行校准</li>
+      <li>每个电调重复此过程</li>
+    </ol>
+
+    <div class="callout info">
+      <span class="callout-icon">&#8505;</span>
+      <p>如果电调支持 BLHeli_S 或 BLHeli_32，也可以使用 BLHeliSuite 通过 USB 编程器直接校准和配置电调参数。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== Step 9 ======================== -->
+<div class="step" id="step9">
+  <div class="step-header" onclick="toggleStep('step9')">
+    <div class="step-num">9</div>
+    <div class="step-title">PID 基础调参</div>
+    <div class="step-toggle">&#9660;</div>
+  </div>
+  <div class="step-body">
+    <p>配置姿态控制器的基础参数。由于 LADRC 已内置到固件中，PID 参数只需设置基础值，LADRC 的线性自抗扰控制会自动补偿扰动。</p>
+
+    <h3 style="font-size:15px; margin: 16px 0 10px;">姿态控制参数</h3>
+    <div class="param-table-wrap">
+      <table class="param-table">
+        <thead>
+          <tr><th>参数</th><th>值</th><th>含义</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="param-name">ATC_ANGLE_PITCH_MAX</td>
+            <td class="param-val">45</td>
+            <td class="param-desc">最大俯仰角限制（度）</td>
+          </tr>
+          <tr>
+            <td class="param-name">ATC_ANGLE_ROLL_MAX</td>
+            <td class="param-val">45</td>
+            <td class="param-desc">最大横滚角限制（度）</td>
+          </tr>
+          <tr>
+            <td class="param-name">ATC_RATE_PITCH</td>
+            <td class="param-val">10</td>
+            <td class="param-desc">俯仰角速度控制增益</td>
+          </tr>
+          <tr>
+            <td class="param-name">ATC_RATE_ROLL</td>
+            <td class="param-val">10</td>
+            <td class="param-desc">横滚角速度控制增益</td>
+          </tr>
+          <tr>
+            <td class="param-name">ATC_RATE_YAW</td>
+            <td class="param-val">5</td>
+            <td class="param-desc">偏航角速度控制增益</td>
+          </tr>
+          <tr>
+            <td class="param-name">ATC_THR_MIX_MAN</td>
+            <td class="param-val">0.5</td>
+            <td class="param-desc">手动油门混合比例（0-1）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="font-size:15px; margin: 20px 0 10px;">电机输出参数</h3>
+    <div class="param-table-wrap">
+      <table class="param-table">
+        <thead>
+          <tr><th>参数</th><th>值</th><th>含义</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="param-name">MOT_SPIN_MIN</td>
+            <td class="param-val">0.1</td>
+            <td class="param-desc">最低怠速（10% 油门），防止电机停转</td>
+          </tr>
+          <tr>
+            <td class="param-name">MOT_SPIN_MAX</td>
+            <td class="param-val">0.95</td>
+            <td class="param-desc">最大转速限制（95%），保留安全余量</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout success">
+      <span class="callout-icon">&#10003;</span>
+      <p><strong>LADRC 优势：</strong>传统 PID 调参需要反复调整 P、I、D 三个参数以平衡响应速度和稳定性。LADRC 通过线性扩张状态观测器（LESO）实时估计并补偿总扰动，因此 PID 参数只需设置合理的初始值，系统会自动处理大部分动态变化。</p>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">&#9888;</span>
+      <p><strong>BiCopter 特殊注意：</strong>BiCopter 仅有 2 个电机，悬停稳定性比四旋翼差。建议初始测试时：
+      - 降低 <code>ATC_ANGLE_PITCH_MAX</code> 和 <code>ATC_ANGLE_ROLL_MAX</code> 到 <code>30</code> 度
+      - 适当降低 <code>ATC_RATE_PITCH</code> 和 <code>ATC_RATE_ROLL</code> 到 <code>8</code>
+      - 测试稳定后再逐步增大</p>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== Step 10 ======================== -->
+<div class="step" id="step10">
+  <div class="step-header" onclick="toggleStep('step10')">
+    <div class="step-num">10</div>
+    <div class="step-title">LADRC 说明</div>
+    <div class="step-toggle">&#9660;</div>
+  </div>
+  <div class="step-body">
+    <p>LADRC（Linear Active Disturbance Rejection Control，线性自抗扰控制）已编译进固件中，默认启用。以下是 LADRC 的核心参数和说明。</p>
+
+    <h3 style="font-size:15px; margin: 16px 0 10px;">LADRC 核心参数（编译时配置）</h3>
+    <div class="param-table-wrap">
+      <table class="param-table">
+        <thead>
+          <tr><th>宏定义</th><th>默认值</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="param-name">LADRC_ENABLED</td>
+            <td class="param-val">1</td>
+            <td class="param-desc">启用 LADRC（设为 0 退化为纯 PID）</td>
+          </tr>
+          <tr>
+            <td class="param-name">LADRC_WO</td>
+            <td class="param-val">10.0</td>
+            <td class="param-desc">观测器带宽 (rad/s)，值越大观测器响应越快但噪声越敏感</td>
+          </tr>
+          <tr>
+            <td class="param-name">LADRC_B0</td>
+            <td class="param-val">1.0</td>
+            <td class="param-desc">控制通道增益，对应系统的控制输入系数</td>
+          </tr>
+          <tr>
+            <td class="param-name">LADRC_ORDER</td>
+            <td class="param-val">1</td>
+            <td class="param-desc">LESO 阶数（1=一阶 LESO，2=二阶 LESO）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="font-size:15px; margin: 18px 0 10px;">工作原理</h3>
+    <p>LADRC 在每个 PID 控制器内部运行一个线性扩张状态观测器（LESO），实时估计系统状态和总扰动：</p>
+    <ul>
+      <li><strong>z1</strong>：被控量的观测值（角度或角速度）</li>
+      <li><strong>z2</strong>：总扰动（包括未建模动态、外部干扰、参数变化等）的估计值</li>
+      <li><strong>z3</strong>：二阶 LESO 时的扰动变化率估计（一阶模式下未使用）</li>
+    </ul>
+    <p>观测到的总扰动会被前馈补偿，大幅降低 PID 控制器需要处理的残余误差。</p>
+
+    <h3 style="font-size:15px; margin: 18px 0 10px;">日志查看 LADRC 补偿量</h3>
+    <p>在 Mission Planner 中可以查看 LADRC 的实时补偿量：</p>
+    <ol>
+      <li>进入 <strong>数据分析 / DataFlash Logs</strong></li>
+      <li>下载飞行日志（.bin 文件）</li>
+      <li>在日志中查找 <code>PIDx.LADRC</code> 字段（x 为 PID 实例编号）</li>
+      <li>LADRC 值为观测器估计的扰动补偿量，正值表示正向补偿，负值表示反向补偿</li>
+    </ol>
+
+    <div class="code-block">
+PID 日志字段说明：
+  P   - 比例项输出
+  I   - 积分项输出
+  D   - 微分项输出
+  DFF - 前馈微分项输出
+  LADRC - LADRC LESO 扰动补偿量（本固件新增）
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">&#8505;</span>
+      <p><strong>调整建议：</strong><br>
+      - <code>LADRC_WO</code>：如果飞行中出现高频振荡，尝试降低到 <code>5.0-8.0</code>；如果响应迟钝可增大到 <code>12.0-15.0</code><br>
+      - <code>LADRC_B0</code>：通常保持 <code>1.0</code>，如果已知系统的控制增益特性可以微调<br>
+      - <code>LADRC_ORDER</code>：一阶 LESO 适用于大多数姿态控制场景；二阶 LESO 可以跟踪更快变化的扰动但计算量更大<br>
+      - 修改以上参数需要重新编译固件</p>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>ArduCopter LADRC BiCopter 参数配置指南 &middot; FlyingRC F4WSE MK1.5 (MatekF405-TE)</p>
+  <p style="margin-top:6px;">LADRC v2 &middot; Multi-instance Independent LESO States</p>
+</div>
+
+</div>
+
+<script>
+function toggleStep(id) {
+  const step = document.getElementById(id);
+  const body = step.querySelector('.step-body');
+  const toggle = step.querySelector('.step-toggle');
+  if (body.classList.contains('show')) {
+    body.classList.remove('show');
+    toggle.classList.remove('open');
+  } else {
+    body.classList.add('show');
+    toggle.classList.add('open');
+  }
+}
+
+// Auto-open first step
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelector('#step1 .step-body').classList.add('show');
+  document.querySelector('#step1 .step-toggle').classList.add('open');
+});
+</script>
+
+</body>
+</html>
